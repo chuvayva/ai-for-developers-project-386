@@ -78,6 +78,7 @@ Commit messages follow [Conventional Commits](https://www.conventionalcommits.or
 
 - Leave the scope out for a change that spans packages.
 - Mark a breaking contract change with `!` after the scope and a `BREAKING CHANGE:` footer.
+- A commit may reference a GitHub issue in a footer: `Refs #12` when it is part of the work, `Closes #12` when it finishes the issue. GitHub then links the commit to the issue, and `Closes` closes it once the commit reaches `main`.
 
 Example: `feat(api): add booking slots endpoint`.
 
