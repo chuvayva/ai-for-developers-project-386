@@ -3,8 +3,10 @@ import type { components } from '@calendar/api';
 import { ApiFailure } from './errors.ts';
 
 type EventType = components['schemas']['EventType'];
+type Booking = components['schemas']['Booking'];
 
 export type NewEventType = Omit<EventType, 'id'>;
+export type NewBooking = Omit<Booking, 'id'>;
 
 /**
  * Everything the server remembers. It lives in memory, so it starts empty and
@@ -16,11 +18,16 @@ export type Store = {
   listEventTypes(): EventType[];
   /** `undefined` when no event type has this id. Any string is a legal id. */
   getEventType(id: string): EventType | undefined;
+  /** Stores the booking as given. The caller has checked that it overlaps no other. */
+  createBooking(input: NewBooking): Booking;
+  /** Every booking, ended ones too, in order of creation. */
+  listBookings(): Booking[];
 };
 
 export function createStore(): Store {
   // A Map iterates in insertion order, which is the order of creation.
   const eventTypes = new Map<string, EventType>();
+  const bookings: Booking[] = [];
 
   return {
     createEventType(input) {
@@ -33,6 +40,14 @@ export function createStore(): Store {
     },
     getEventType(id) {
       return eventTypes.get(id);
+    },
+    createBooking(input) {
+      const booking: Booking = { id: `bkg_${randomUUID()}`, ...input };
+      bookings.push(booking);
+      return booking;
+    },
+    listBookings() {
+      return [...bookings];
     },
   };
 }

@@ -1,5 +1,6 @@
 import Fastify, { type FastifyInstance, type FastifyServerOptions } from 'fastify';
 import { registerErrorHandling } from './errors.ts';
+import bookingRoutes from './routes/bookings.ts';
 import eventTypeRoutes from './routes/event-types.ts';
 import healthRoutes from './routes/health.ts';
 import slotRoutes from './routes/slots.ts';
@@ -30,6 +31,7 @@ export function build(opts: AppOptions = {}): FastifyInstance {
   app.register(healthRoutes, { prefix: '/api' });
   app.register(eventTypeRoutes, { prefix: '/api', store });
   app.register(slotRoutes, { prefix: '/api', store, now });
+  app.register(bookingRoutes, { prefix: '/api', store, now });
 
   return app;
 }

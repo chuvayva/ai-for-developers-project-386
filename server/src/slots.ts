@@ -65,9 +65,12 @@ function fromWallTime(wallTime: number): number {
   return wallTime - offsetAt(wallTime - offsetAt(wallTime));
 }
 
-/** A moment the way the contract writes it: UTC with `Z` and whole seconds. */
-function toTimestamp(moment: number): string {
-  return new Date(moment).toISOString().replace('.000Z', 'Z');
+/**
+ * A moment the way the contract writes it: UTC with `Z` and whole seconds. A
+ * fraction of a second is dropped.
+ */
+export function toTimestamp(moment: number): string {
+  return `${new Date(moment).toISOString().slice(0, 19)}Z`;
 }
 
 /**
@@ -121,4 +124,32 @@ export function listSlotDays(question: SlotQuestion): SlotDay[] {
   }
 
   return days;
+}
+
+/** What a start time is for an event type at this moment. */
+export type StartTimeAnswer =
+  /** A slot: `listSlotDays` offers it. */
+  | { is: 'slot'; slot: Slot }
+  /** It passes every slot rule but the overlap: a booking covers part of its interval. */
+  | { is: 'taken' }
+  /** It breaks a slot rule other than the overlap. */
+  | { is: 'not-a-slot' };
+
+/**
+ * Says whether a start time can be booked. It asks `listSlotDays`, so the
+ * answer is `slot` exactly for the start times that function offers.
+ */
+export function checkStartTime(question: SlotQuestion, startTime: Date): StartTimeAnswer {
+  const start = startTime.getTime();
+  const find = (bookings: readonly BookedInterval[]) =>
+    listSlotDays({ ...question, bookings })
+      .flatMap((day) => day.slots)
+      .find((slot) => Date.parse(slot.startTime) === start);
+
+  // With no bookings only the overlap rule is left out.
+  if (!find([])) {
+    return { is: 'not-a-slot' };
+  }
+  const slot = find(question.bookings);
+  return slot ? { is: 'slot', slot } : { is: 'taken' };
 }

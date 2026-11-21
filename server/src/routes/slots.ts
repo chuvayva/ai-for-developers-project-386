@@ -20,8 +20,7 @@ export default async function slotRoutes(
         listSlotDays({
           durationMinutes: eventType.durationMinutes,
           now: now(),
-          // The store keeps no bookings yet.
-          bookings: [],
+          bookings: store.listBookings(),
         }),
       );
     },
