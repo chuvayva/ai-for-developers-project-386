@@ -1,8 +1,12 @@
 import { MantineProvider } from '@mantine/core';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
-import { expect, test } from 'vitest';
+import { afterEach, expect, test, vi } from 'vitest';
 import { App } from './App.tsx';
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
 
 function renderAt(path: string) {
   render(
@@ -29,13 +33,14 @@ test('home page links to the host event types page', () => {
   expect(link.getAttribute('href')).toBe('/host/event-types');
 });
 
-test('following the home page link opens the booking page', () => {
+test('following the home page link opens the list of event types to book', async () => {
+  vi.stubGlobal('fetch', async () => Response.json([]));
   renderAt('/');
 
   fireEvent.click(screen.getByRole('link', { name: 'Book a call' }));
 
   expect(screen.getByRole('heading', { name: 'Book a call' })).toBeTruthy();
-  expect(screen.getByText('Booking is coming soon.')).toBeTruthy();
+  expect(await screen.findByText('There are no event types to book yet.')).toBeTruthy();
 });
 
 test('unknown path shows the not found page', () => {

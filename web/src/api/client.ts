@@ -2,6 +2,8 @@ import type { components } from '@calendar/api';
 
 export type ErrorCode = components['schemas']['ErrorCode'];
 export type EventType = components['schemas']['EventType'];
+export type Slot = components['schemas']['Slot'];
+export type SlotDay = components['schemas']['SlotDay'];
 export type CreateEventTypeRequest = components['schemas']['CreateEventTypeRequest'];
 
 /**
@@ -49,6 +51,15 @@ function post<T>(path: string, body: unknown): Promise<T> {
 
 export function listEventTypes(): Promise<EventType[]> {
   return request('/event-types');
+}
+
+export function getEventType(eventTypeId: string): Promise<EventType> {
+  return request(`/event-types/${encodeURIComponent(eventTypeId)}`);
+}
+
+/** The 14 days of the booking window, each with the slots of the event type. */
+export function listSlots(eventTypeId: string): Promise<SlotDay[]> {
+  return request(`/event-types/${encodeURIComponent(eventTypeId)}/slots`);
 }
 
 export function createEventType(body: CreateEventTypeRequest): Promise<EventType> {
