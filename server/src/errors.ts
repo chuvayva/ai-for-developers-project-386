@@ -1,5 +1,5 @@
 import type { components } from '@calendar/api';
-import type { FastifyInstance } from 'fastify';
+import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 
 type ApiError = components['schemas']['ApiError'];
 type ErrorCode = components['schemas']['ErrorCode'];
@@ -32,6 +32,16 @@ function clientErrorMessage(error: unknown): string | undefined {
   const { statusCode } = error as Error & { statusCode?: unknown };
   const isClientError = typeof statusCode === 'number' && statusCode >= 400 && statusCode < 500;
   return isClientError ? error.message : undefined;
+}
+
+/**
+ * Answers a request the router could not read, such as a path with a broken
+ * percent escape. It never reaches a route, so the error handler does not see
+ * it. `build()` passes this function to Fastify as `frameworkErrors`.
+ */
+export function sendRouterFailure(error: Error, _request: FastifyRequest, reply: FastifyReply) {
+  const body: ApiError = { code: 'validation_failed', message: error.message };
+  return reply.status(statusByCode.validation_failed).send(body);
 }
 
 /**

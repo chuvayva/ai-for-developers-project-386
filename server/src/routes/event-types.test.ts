@@ -207,6 +207,47 @@ test.each(['evt_missing', 'constructor', '%20', 'slots'])(
   },
 );
 
+test('an id of any length is a legal id', async () => {
+  const app = build();
+
+  const response = await getEventType(app, 'x'.repeat(500));
+
+  expect(response.statusCode).toBe(404);
+  expect(response.json()).toEqual({ code: 'event_type_not_found', message: expect.any(String) });
+});
+
+test('an id that is not a valid URL component is rejected with validation_failed', async () => {
+  const app = build();
+
+  const response = await getEventType(app, '%zz');
+
+  expect(response.statusCode).toBe(400);
+  expect(response.json()).toEqual({ code: 'validation_failed', message: expect.any(String) });
+});
+
+test('a body larger than the server reads is rejected with validation_failed', async () => {
+  const app = build({ bodyLimit: 64 });
+
+  const response = await createEventType(app, { name: 'x'.repeat(100), durationMinutes: 30 });
+
+  expect(response.statusCode).toBe(400);
+  expect(response.json()).toEqual({ code: 'validation_failed', message: expect.any(String) });
+});
+
+test('a body that is not JSON is rejected with validation_failed', async () => {
+  const app = build();
+
+  const response = await app.inject({
+    method: 'POST',
+    url: '/api/event-types',
+    headers: { 'content-type': 'text/csv' },
+    payload: 'Intro call,30',
+  });
+
+  expect(response.statusCode).toBe(400);
+  expect(response.json()).toEqual({ code: 'validation_failed', message: expect.any(String) });
+});
+
 test('an empty body is rejected with validation_failed', async () => {
   const app = build();
 

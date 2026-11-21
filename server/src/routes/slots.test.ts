@@ -107,3 +107,21 @@ test('the slots of an unknown event type are 404 event_type_not_found', async ()
   expect(response.statusCode).toBe(404);
   expect(response.json()).toEqual({ code: 'event_type_not_found', message: expect.any(String) });
 });
+
+test('an id of any length is a legal id', async () => {
+  const app = build({ now: mondayMorning });
+
+  const response = await listSlots(app, 'x'.repeat(500));
+
+  expect(response.statusCode).toBe(404);
+  expect(response.json()).toEqual({ code: 'event_type_not_found', message: expect.any(String) });
+});
+
+test('an id that is not a valid URL component is 400 validation_failed', async () => {
+  const app = build({ now: mondayMorning });
+
+  const response = await listSlots(app, '%zz');
+
+  expect(response.statusCode).toBe(400);
+  expect(response.json()).toEqual({ code: 'validation_failed', message: expect.any(String) });
+});

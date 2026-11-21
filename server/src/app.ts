@@ -1,5 +1,5 @@
 import Fastify, { type FastifyInstance, type FastifyServerOptions } from 'fastify';
-import { registerErrorHandling } from './errors.ts';
+import { registerErrorHandling, sendRouterFailure } from './errors.ts';
 import bookingRoutes from './routes/bookings.ts';
 import eventTypeRoutes from './routes/event-types.ts';
 import healthRoutes from './routes/health.ts';
@@ -21,6 +21,9 @@ export function build(opts: AppOptions = {}): FastifyInstance {
     ...fastifyOptions,
     // The contract's types are exact: the string "30" is not a duration.
     ajv: { customOptions: { coerceTypes: false } },
+    // Any string is a legal id, so the router does not cap the length of one.
+    routerOptions: { ...fastifyOptions.routerOptions, maxParamLength: Number.MAX_SAFE_INTEGER },
+    frameworkErrors: sendRouterFailure,
   });
 
   registerErrorHandling(app);
