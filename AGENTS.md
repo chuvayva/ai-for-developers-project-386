@@ -14,13 +14,17 @@ A pnpm workspace with three packages:
 
 Every change to the HTTP API starts in `api/main.tsp`. `pnpm --filter @calendar/api build` compiles it to `api/generated/openapi.yaml` and then to `api/generated/schema.d.ts`. `server` and `web` take request and response types from `@calendar/api`, so a contract change that the code has not followed fails the typecheck.
 
-`api/generated/` is gitignored build output. Regenerate it after a fresh clone and after every contract edit. `mise run check` does this as its first step.
+`api/generated/` is gitignored build output. Change it only by editing `api/main.tsp` and regenerating. Regenerate after a fresh clone and after every contract edit. `mise run check` does this for you.
 
 ## Verifying
 
-`mise run check` is the one gate: install, generate the contract, typecheck, test, build. Run it before every commit and commit only when it passes.
+`mise run check` is the one gate, and CI runs the same command. It runs the steps in `hk.pkl`: lint (oxlint), format (oxfmt), contract generation, typecheck, tests and the web build. A change is done when it passes.
 
-`mise.toml` pins Node and pnpm. Run `pnpm` and `node` through mise (`mise exec -- pnpm ...`) when the shell has no mise activation.
+`mise run fix` applies the safe lint and format fixes. `mise run setup` installs dependencies and the git hooks. The hooks lint and format staged files on commit, check the commit message, and run the full gate on push.
+
+Lint rules stay on. When a rule cannot be satisfied, stop and ask for a human decision. An approved exception names one path and one rule and records the reason.
+
+`mise.toml` pins every tool. Run `pnpm` and `node` through mise (`mise exec -- pnpm ...`) when the shell has no mise activation.
 
 ## Server
 
@@ -43,10 +47,9 @@ The Vite dev server proxies `/api` to the backend on `127.0.0.1:3000`.
 
 ## Commits
 
-Commit messages follow [Conventional Commits](https://www.conventionalcommits.org/): `<type>(<scope>): <summary>`, with the summary in the imperative mood and lower case.
+Commit messages follow [Conventional Commits](https://www.conventionalcommits.org/): `<type>(<scope>): <summary>`, with the summary in the imperative mood and lower case. commitlint enforces this in the `commit-msg` hook and in CI, with the allowed scopes listed in `.commitlintrc.json`.
 
-- Types: `feat`, `fix`, `docs`, `test`, `refactor`, `chore`, `build`, `ci`.
-- Scopes: `api`, `server`, `web`. Leave the scope out for a change that spans packages.
+- Leave the scope out for a change that spans packages.
 - Mark a breaking contract change with `!` after the scope and a `BREAKING CHANGE:` footer.
 
 Example: `feat(api): add booking slots endpoint`.

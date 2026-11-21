@@ -21,10 +21,11 @@ git clone https://github.com/chuvayva/ai-for-developers-project-386.git
 cd ai-for-developers-project-386
 mise trust
 mise install
+mise run setup
 mise run check
 ```
 
-`mise run check` ставит зависимости, генерирует OpenAPI из TypeSpec, проверяет типы, запускает тесты и собирает фронтенд.
+`mise run setup` ставит зависимости и git-хуки. `mise run check` запускает линтер и форматтер, генерирует OpenAPI из TypeSpec, проверяет типы, запускает тесты и собирает фронтенд. Ту же команду запускает CI.
 
 ## Использование
 

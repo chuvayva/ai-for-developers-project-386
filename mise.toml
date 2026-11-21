@@ -1,13 +1,19 @@
+# One toolchain for developers, git hooks and CI: `mise run setup` once, then `mise run check`.
 [tools]
-node = "24"
-pnpm = "12"
+node = "24.22.3"
+pnpm = "12.22.0"
+hk = "2.13.0"
+oxlint = "1.94.0"
+oxfmt = "0.79.0"
+
+[tasks.setup]
+description = "Install dependencies and the git hooks"
+run = ["pnpm install", "hk install --mise"]
 
 [tasks.check]
-description = "Install dependencies, generate the API contract, typecheck, test and build"
-run = [
-  "pnpm install",
-  "pnpm --filter @calendar/api build",
-  "pnpm -r typecheck",
-  "pnpm -r test",
-  "pnpm --filter @calendar/web build",
-]
+description = "Run every check, the same set CI runs"
+run = ["pnpm install --frozen-lockfile", "hk check --all"]
+
+[tasks.fix]
+description = "Apply the safe automatic fixes"
+run = "hk fix --all"

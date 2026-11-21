@@ -1,21 +1,20 @@
 import { cleanup } from '@testing-library/react';
-import { afterEach, vi } from 'vitest';
+import { afterEach } from 'vitest';
 
 afterEach(cleanup);
 
 // jsdom has no matchMedia or ResizeObserver, and Mantine calls both.
-Object.defineProperty(window, 'matchMedia', {
-  writable: true,
-  value: vi.fn((query: string) => ({
-    matches: false,
-    media: query,
-    onchange: null,
-    addEventListener: vi.fn(),
-    removeEventListener: vi.fn(),
-    addListener: vi.fn(),
-    removeListener: vi.fn(),
-    dispatchEvent: vi.fn(),
-  })),
+const noop = () => {};
+
+window.matchMedia = (query: string): MediaQueryList => ({
+  matches: false,
+  media: query,
+  onchange: null,
+  addEventListener: noop,
+  removeEventListener: noop,
+  addListener: noop,
+  removeListener: noop,
+  dispatchEvent: () => false,
 });
 
 class ResizeObserverStub {
