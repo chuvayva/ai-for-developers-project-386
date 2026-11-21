@@ -170,6 +170,43 @@ test('a body that is not parsable JSON is rejected with validation_failed', asyn
   expect(response.json()).toEqual({ code: 'validation_failed', message: expect.any(String) });
 });
 
+function getEventType(app: FastifyInstance, id: string) {
+  return app.inject({ method: 'GET', url: `/api/event-types/${id}` });
+}
+
+test('an event type can be read by its id', async () => {
+  const app = build();
+  await createEventType(app, { name: 'Other', durationMinutes: 15 });
+  const created = await createEventType(app, {
+    name: 'Intro call',
+    description: 'A short call to get acquainted.',
+    durationMinutes: 30,
+  });
+
+  const response = await getEventType(app, created.json().id);
+
+  expect(response.statusCode).toBe(200);
+  expect(response.json()).toEqual({
+    id: created.json().id,
+    name: 'Intro call',
+    description: 'A short call to get acquainted.',
+    durationMinutes: 30,
+  });
+});
+
+test.each(['evt_missing', 'constructor', '%20', 'slots'])(
+  'reading the unknown id "%s" is 404 event_type_not_found',
+  async (id) => {
+    const app = build();
+    await createEventType(app, { name: 'Intro call', durationMinutes: 30 });
+
+    const response = await getEventType(app, id);
+
+    expect(response.statusCode).toBe(404);
+    expect(response.json()).toEqual({ code: 'event_type_not_found', message: expect.any(String) });
+  },
+);
+
 test('an empty body is rejected with validation_failed', async () => {
   const app = build();
 

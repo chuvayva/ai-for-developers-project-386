@@ -1,6 +1,6 @@
 import type { components } from '@calendar/api';
 import type { FastifyInstance } from 'fastify';
-import type { Store } from '../store.ts';
+import { requireEventType, type Store } from '../store.ts';
 
 type EventType = components['schemas']['EventType'];
 type CreateEventTypeRequest = components['schemas']['CreateEventTypeRequest'];
@@ -29,6 +29,13 @@ export default async function eventTypeRoutes(fastify: FastifyInstance, opts: { 
       const { name, description = '', durationMinutes } = request.body;
       reply.status(201);
       return store.createEventType({ name, description, durationMinutes });
+    },
+  );
+
+  fastify.get<{ Params: { eventTypeId: string }; Reply: EventType }>(
+    '/event-types/:eventTypeId',
+    (request, reply) => {
+      reply.send(requireEventType(store, request.params.eventTypeId));
     },
   );
 }
