@@ -394,3 +394,91 @@ test('of overlapping bookings sent together exactly one succeeds', async () => {
     14 * fiveMinuteSlotsADay - minutesBooked / 5,
   );
 });
+
+function listBookings(app: FastifyInstance) {
+  return app.inject({ method: 'GET', url: '/api/bookings' });
+}
+
+async function upcomingStarts(app: FastifyInstance): Promise<string[]> {
+  const bookings: { startTime: string }[] = (await listBookings(app)).json();
+  return bookings.map((booking) => booking.startTime);
+}
+
+test('listing the bookings returns an empty list when there are none', async () => {
+  const app = build({ now: mondayMorning });
+
+  const response = await listBookings(app);
+
+  expect(response.statusCode).toBe(200);
+  expect(response.json()).toEqual([]);
+});
+
+test('listing the bookings returns each upcoming booking in full', async () => {
+  const app = build({ now: mondayMorning });
+  const eventTypeId = await createEventType(app, 30);
+  const created = await createBooking(app, { eventTypeId, ...valid });
+
+  const response = await listBookings(app);
+
+  expect(response.statusCode).toBe(200);
+  expect(response.json()).toEqual([
+    {
+      id: created.json().id,
+      eventType: {
+        id: eventTypeId,
+        name: 'Intro call',
+        description: 'A short call.',
+        durationMinutes: 30,
+      },
+      startTime: '2026-11-23T06:00:00Z',
+      endTime: '2026-11-23T06:30:00Z',
+      guestName: 'Anna Petrova',
+      guestEmail: 'anna@example.com',
+      createdAt: '2026-11-23T05:00:00Z',
+    },
+  ]);
+});
+
+test('the upcoming bookings are ordered by start time, whatever the order of booking', async () => {
+  const app = build({ now: mondayMorning });
+  const halfHour = await createEventType(app, 30);
+  const hour = await createEventType(app, 60, 'Long call');
+
+  await createBooking(app, { eventTypeId: halfHour, ...anna, startTime: '2026-11-25T06:00:00Z' });
+  await createBooking(app, { eventTypeId: hour, ...anna, startTime: '2026-11-23T10:00:00Z' });
+  await createBooking(app, { eventTypeId: halfHour, ...anna, startTime: '2026-11-24T06:00:00Z' });
+  await createBooking(app, { eventTypeId: halfHour, ...anna, startTime: '2026-11-23T06:00:00Z' });
+
+  expect(await upcomingStarts(app)).toEqual([
+    '2026-11-23T06:00:00Z',
+    '2026-11-23T10:00:00Z',
+    '2026-11-24T06:00:00Z',
+    '2026-11-25T06:00:00Z',
+  ]);
+});
+
+test('a booking stays on the list while its call is in progress and leaves when it ends', async () => {
+  let now = mondayMorning();
+  const app = build({ now: () => now });
+  const eventTypeId = await createEventType(app, 30);
+  // 09:00 to 09:30 and 09:30 to 10:00 in Moscow.
+  const first = '2026-11-23T06:00:00Z';
+  const second = '2026-11-23T06:30:00Z';
+  await createBooking(app, { eventTypeId, ...anna, startTime: first });
+  await createBooking(app, { eventTypeId, ...anna, startTime: second });
+
+  // The first call has just started.
+  now = new Date('2026-11-23T06:00:00Z');
+  expect(await upcomingStarts(app)).toEqual([first, second]);
+
+  // One second before the first call ends.
+  now = new Date('2026-11-23T06:29:59Z');
+  expect(await upcomingStarts(app)).toEqual([first, second]);
+
+  // The first call ends at this moment, so it is no longer upcoming.
+  now = new Date('2026-11-23T06:30:00Z');
+  expect(await upcomingStarts(app)).toEqual([second]);
+
+  now = new Date('2026-11-23T07:00:00Z');
+  expect(await upcomingStarts(app)).toEqual([]);
+});

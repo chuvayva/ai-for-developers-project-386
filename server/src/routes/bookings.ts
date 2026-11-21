@@ -26,6 +26,17 @@ export default async function bookingRoutes(
 ) {
   const { store, now } = opts;
 
+  fastify.get<{ Reply: Booking[] }>('/bookings', (_request, reply) => {
+    const moment = now().getTime();
+    // A call in progress has not ended, so it is still upcoming.
+    const upcoming = store
+      .listBookings()
+      .filter((booking) => Date.parse(booking.endTime) > moment)
+      // Soonest first. Bookings never overlap, so no two share a start time.
+      .toSorted((a, b) => Date.parse(a.startTime) - Date.parse(b.startTime));
+    reply.send(upcoming);
+  });
+
   // The handler has no `await`, so it runs from its first line to its last
   // before the process takes up another request. The overlap check and the
   // write are one step, and two requests cannot both find the interval free.
