@@ -1,12 +1,14 @@
-import { Container, Text, Title } from '@mantine/core';
+import { Route, Routes } from 'react-router';
+import { BookingPage } from './pages/BookingPage.tsx';
+import { HomePage } from './pages/HomePage.tsx';
+import { NotFoundPage } from './pages/NotFoundPage.tsx';
 
 export function App() {
   return (
-    <Container size="sm" py="xl">
-      <Title order={1}>Calendar</Title>
-      <Text c="dimmed" mt="sm">
-        Book a call in a free time slot.
-      </Text>
-    </Container>
+    <Routes>
+      <Route path="/" element={<HomePage />} />
+      <Route path="/book" element={<BookingPage />} />
+      <Route path="*" element={<NotFoundPage />} />
+    </Routes>
   );
 }
