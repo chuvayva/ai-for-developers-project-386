@@ -4,11 +4,12 @@ A calendar booking app in the spirit of cal.com: a host publishes free slots, a 
 
 ## Layout
 
-A pnpm workspace with three packages:
+A pnpm workspace with four packages:
 
 - `api` is the TypeSpec contract. It is the single source of truth for the HTTP API.
 - `server` is the Fastify backend on Node.
 - `web` is the Vite, React and Mantine frontend.
+- `e2e` holds the Playwright end-to-end tests.
 
 ## API first
 
@@ -28,6 +29,16 @@ Lint rules stay on. When a rule cannot be satisfied, stop and ask for a human de
 
 `mise.toml` pins every tool. Run `pnpm` and `node` through mise (`mise exec -- pnpm ...`) when the shell has no mise activation.
 
+## End-to-end tests
+
+`mise run e2e` runs the Playwright tests in `e2e/tests/` in Chromium. It is a separate command and a separate CI job. `mise run check` and the push hook do not run it.
+
+The command starts its own server on `127.0.0.1:3100` and its own Vite dev server on `localhost:5273`, runs the tests and stops both. It fails when one of those ports is taken. `mise run dev` uses other ports, so both can run at once. The first run downloads Chromium.
+
+Every run starts with no event types and no bookings, and all test files share that one server. A test creates the data it needs and uses names of its own, so that tests do not depend on each other. Tests choose slots relative to today. Do not fix the clock.
+
+Add or update an end-to-end test when a change adds or alters something a user does in the browser across the web and the server, such as creating an event type or booking a slot. Server rules and component details stay in the `server` and `web` tests.
+
 ## Server
 
 The server follows the Fastify Getting Started and Testing guides. `server/src/app.ts` exports `build(opts)`, which registers route plugins and never listens. `server/src/main.ts` is the only file that calls `listen`. Each group of routes is a plugin in `server/src/routes/`, registered under the `/api` prefix. Tests call `build()` and use `app.inject()`.
@@ -41,11 +52,11 @@ Node runs the TypeScript sources directly through type stripping, with no build 
 
 Render components under test inside `MantineProvider`. `web/src/test-setup.ts` stubs `matchMedia` and `ResizeObserver`, which jsdom lacks and Mantine calls.
 
-The Vite dev server proxies `/api` to the backend on `127.0.0.1:3000`.
+The Vite dev server proxies `/api` to the backend on `127.0.0.1:3000`. The `API_ORIGIN` environment variable overrides that address.
 
 ## TypeScript versions
 
-The project compiles with TypeScript 7. `tsc` runs only in `server` and `web`.
+The project compiles with TypeScript 7. `tsc` runs only in `server`, `web` and `e2e`.
 
 `api` also lists TypeScript 5, but nothing is compiled with it. `openapi-typescript` loads it as a library to print the generated types, and it cannot load TypeScript 7 ([openapi-typescript#2841](https://github.com/openapi-ts/openapi-typescript/issues/2841)). When that issue is fixed, move `api` to TypeScript 7 as well.
 

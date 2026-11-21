@@ -14,6 +14,15 @@ run = ["pnpm install", "hk install --mise"]
 description = "Run every check, the same set CI runs"
 run = ["pnpm install --frozen-lockfile", "hk check --all"]
 
+[tasks.e2e]
+description = "Start a fresh API and interface, run the end-to-end tests in a browser, stop both"
+run = [
+  "pnpm install --frozen-lockfile",
+  # CI runners also need the system libraries Chromium links to.
+  "pnpm --filter @calendar/e2e exec playwright install ${CI:+--with-deps} chromium",
+  "pnpm --filter @calendar/e2e e2e",
+]
+
 [tasks.fix]
 description = "Apply the safe automatic fixes"
 run = "hk fix --all"
