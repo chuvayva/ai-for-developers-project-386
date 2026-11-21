@@ -43,7 +43,9 @@ The Vite dev server proxies `/api` to the backend on `127.0.0.1:3000`.
 
 ## TypeScript versions
 
-`server` and `web` use TypeScript 7. `api` pins TypeScript 5 because `openapi-typescript` 7 requires it as a peer. Keep the two apart until `openapi-typescript` supports TypeScript 7.
+The project compiles with TypeScript 7. `tsc` runs only in `server` and `web`.
+
+`api` also lists TypeScript 5, but nothing is compiled with it. `openapi-typescript` loads it as a library to print the generated types, and it cannot load TypeScript 7 ([openapi-typescript#2841](https://github.com/openapi-ts/openapi-typescript/issues/2841)). When that issue is fixed, move `api` to TypeScript 7 as well.
 
 ## Commits
 
