@@ -1,30 +1,14 @@
 import type { components } from '@calendar/api';
-import { MantineProvider } from '@mantine/core';
-import { fireEvent, render, screen, within } from '@testing-library/react';
-import { MemoryRouter } from 'react-router';
+import { fireEvent, screen, within } from '@testing-library/react';
 import { afterEach, expect, test, vi } from 'vitest';
-import { App } from '../App.tsx';
+import { intro, json, renderAt, shownSlots, stubApi } from '../testing.tsx';
 
-type EventType = components['schemas']['EventType'];
+// A guest looks at the days and slots on the booking page, `/book/:eventTypeId`.
+
 type SlotDay = components['schemas']['SlotDay'];
-
-function json(status: number, body: unknown): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { 'content-type': 'application/json' },
-  });
-}
 
 const notFound = () =>
   json(404, { code: 'event_type_not_found', message: 'No event type has the id "evt_gone".' });
-
-/** Stands in for the server at the `fetch` boundary. Each key is a path under `/api`. */
-function fakeApi(responses: Record<string, () => Response>) {
-  vi.stubGlobal('fetch', async (input: string) => {
-    const respond = responses[input.replace(/^\/api/, '')];
-    return respond ? respond() : new Response('Not stubbed', { status: 500 });
-  });
-}
 
 const originalZone = process.env.TZ;
 
@@ -36,29 +20,6 @@ afterEach(() => {
     process.env.TZ = originalZone;
   }
 });
-
-function renderAt(path: string) {
-  render(
-    <MantineProvider>
-      <MemoryRouter initialEntries={[path]}>
-        <App />
-      </MemoryRouter>
-    </MantineProvider>,
-  );
-}
-
-const intro: EventType = {
-  id: 'evt_a',
-  name: 'Intro call',
-  description: 'A short call to get acquainted.',
-  durationMinutes: 30,
-};
-const review: EventType = {
-  id: 'evt_b',
-  name: 'Code review',
-  description: '',
-  durationMinutes: 45,
-};
 
 // A booking window that starts on Monday 23 November 2026. Moscow is UTC+3.
 const bookingWindow: SlotDay[] = [
@@ -79,77 +40,11 @@ const bookingWindow: SlotDay[] = [
 ];
 
 function introApi(days: SlotDay[] = bookingWindow) {
-  fakeApi({
-    '/event-types/evt_a': () => json(200, intro),
-    '/event-types/evt_a/slots': () => json(200, days),
+  stubApi({
+    'GET /api/event-types/evt_a': () => json(200, intro),
+    'GET /api/event-types/evt_a/slots': () => json(200, days),
   });
 }
-
-function shownSlots(): (string | null)[] {
-  return within(screen.getByRole('list', { name: 'Slots' }))
-    .getAllByRole('listitem')
-    .map((item) => item.textContent);
-}
-
-// The list of event types, `/book`.
-
-test('the guest sees the event types with name, description and duration', async () => {
-  fakeApi({ '/event-types': () => json(200, [review, intro]) });
-
-  renderAt('/book');
-
-  const list = await screen.findByRole('list', { name: 'Event types' });
-  const items = within(list).getAllByRole('listitem');
-  expect(items).toHaveLength(2);
-  expect(items[0]?.textContent).toContain('Code review');
-  expect(items[0]?.textContent).toContain('45 min');
-  expect(items[1]?.textContent).toContain('Intro call');
-  expect(items[1]?.textContent).toContain('30 min');
-  expect(items[1]?.textContent).toContain('A short call to get acquainted.');
-});
-
-test('each event type leads to its slots', async () => {
-  fakeApi({ '/event-types': () => json(200, [review, intro]) });
-
-  renderAt('/book');
-
-  const link = await screen.findByRole('link', { name: 'Intro call' });
-  expect(link.getAttribute('href')).toBe('/book/evt_a');
-});
-
-test('the guest is told when there are no event types', async () => {
-  fakeApi({ '/event-types': () => json(200, []) });
-
-  renderAt('/book');
-
-  expect(await screen.findByText('There are no event types to book yet.')).toBeTruthy();
-  expect(screen.queryByRole('list', { name: 'Event types' })).toBeNull();
-});
-
-test('the guest is told when the event types cannot be loaded', async () => {
-  fakeApi({ '/event-types': () => new Response('Bad gateway', { status: 502 }) });
-
-  renderAt('/book');
-
-  expect(await screen.findByText('The event types could not be loaded.')).toBeTruthy();
-});
-
-test('the guest goes from the home page to an event type and its slots', async () => {
-  fakeApi({
-    '/event-types': () => json(200, [intro]),
-    '/event-types/evt_a': () => json(200, intro),
-    '/event-types/evt_a/slots': () => json(200, bookingWindow),
-  });
-  renderAt('/');
-
-  fireEvent.click(screen.getByRole('link', { name: 'Book a call' }));
-  fireEvent.click(await screen.findByRole('link', { name: 'Intro call' }));
-
-  expect(await screen.findByRole('heading', { name: 'Intro call', level: 1 })).toBeTruthy();
-  expect(shownSlots()).toEqual(['16:30 – 17:00', '17:30 – 18:00']);
-});
-
-// The slots of an event type, `/book/:eventTypeId`.
 
 test('the slots page shows the event type and the 14 days of the booking window', async () => {
   introApi();
@@ -241,9 +136,9 @@ test.each(['America/Los_Angeles', 'Pacific/Kiritimati', 'UTC'])(
 );
 
 test('an unknown event type shows a not found state', async () => {
-  fakeApi({
-    '/event-types/evt_gone': notFound,
-    '/event-types/evt_gone/slots': notFound,
+  stubApi({
+    'GET /api/event-types/evt_gone': notFound,
+    'GET /api/event-types/evt_gone/slots': notFound,
   });
 
   renderAt('/book/evt_gone');
@@ -272,9 +167,9 @@ test('the id in the address is sent to the server as one path segment', async ()
 });
 
 test('the slots page says so when it cannot be loaded', async () => {
-  fakeApi({
-    '/event-types/evt_a': () => json(200, intro),
-    '/event-types/evt_a/slots': () => new Response('Bad gateway', { status: 502 }),
+  stubApi({
+    'GET /api/event-types/evt_a': () => json(200, intro),
+    'GET /api/event-types/evt_a/slots': () => new Response('Bad gateway', { status: 502 }),
   });
 
   renderAt('/book/evt_a');

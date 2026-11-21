@@ -1,24 +1,12 @@
-import { MantineProvider } from '@mantine/core';
-import { fireEvent, render, screen } from '@testing-library/react';
-import { MemoryRouter } from 'react-router';
+import { fireEvent, screen } from '@testing-library/react';
 import { afterEach, expect, test, vi } from 'vitest';
-import { App } from './App.tsx';
+import { renderAt } from './testing.tsx';
 
 afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-function renderAt(path: string) {
-  render(
-    <MantineProvider>
-      <MemoryRouter initialEntries={[path]}>
-        <App />
-      </MemoryRouter>
-    </MantineProvider>,
-  );
-}
-
-test('home page links to the booking page', () => {
+test('home page links to the guest event types page', () => {
   renderAt('/');
 
   expect(screen.getByRole('heading', { name: 'Calendar' })).toBeTruthy();

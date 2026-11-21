@@ -1,27 +1,12 @@
 import type { components } from '@calendar/api';
-import { MantineProvider } from '@mantine/core';
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
-import { MemoryRouter } from 'react-router';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { afterEach, expect, test, vi } from 'vitest';
-import { App } from '../App.tsx';
+import { intro, json, renderAt, shownSlots, stubApi } from '../testing.tsx';
+
+// A guest books a slot on the booking page, `/book/:eventTypeId`.
 
 type Booking = components['schemas']['Booking'];
-type EventType = components['schemas']['EventType'];
 type SlotDay = components['schemas']['SlotDay'];
-
-function json(status: number, body: unknown): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { 'content-type': 'application/json' },
-  });
-}
-
-const intro: EventType = {
-  id: 'evt_a',
-  name: 'Intro call',
-  description: 'A short call to get acquainted.',
-  durationMinutes: 30,
-};
 
 // A booking window that starts on Monday 23 November 2026. Moscow is UTC+3.
 const laterDays: SlotDay[] = [
@@ -55,8 +40,11 @@ const slotTaken = () =>
   json(409, { code: 'slot_taken', message: 'The slot starting at that time is already booked.' });
 
 type Server = {
-  /** What `listSlots` answers now. A test changes it to stand for another guest's booking. */
-  days: SlotDay[];
+  /**
+   * What `listSlots` answers now. A test changes it to stand for another guest's
+   * booking, or to `undefined` to make the request fail.
+   */
+  days: SlotDay[] | undefined;
   /** What `createBooking` answers. */
   book: () => Response;
   /** The bodies of the `createBooking` requests, in order. */
@@ -65,24 +53,20 @@ type Server = {
   slotLoads: number;
 };
 
-/** Stands in for the server at the `fetch` boundary. */
+/** A server with one event type, whose slots and booking answer a test can change. */
 function fakeServer(book: () => Response = () => json(201, annaAtTuesday)): Server {
   const server: Server = { days: allSlots, book, sent: [], slotLoads: 0 };
 
-  vi.stubGlobal('fetch', async (input: string, init?: RequestInit) => {
-    const request = `${init?.method ?? 'GET'} ${input}`;
-    if (request === 'GET /api/event-types/evt_a') {
-      return json(200, intro);
-    }
-    if (request === 'GET /api/event-types/evt_a/slots') {
+  stubApi({
+    'GET /api/event-types/evt_a': () => json(200, intro),
+    'GET /api/event-types/evt_a/slots': () => {
       server.slotLoads += 1;
-      return json(200, server.days);
-    }
-    if (request === 'POST /api/bookings') {
-      server.sent.push(JSON.parse(String(init?.body)));
+      return server.days ? json(200, server.days) : new Response('Bad gateway', { status: 502 });
+    },
+    'POST /api/bookings': (body) => {
+      server.sent.push(body);
       return server.book();
-    }
-    return new Response('Not stubbed', { status: 500 });
+    },
   });
 
   return server;
@@ -93,19 +77,7 @@ afterEach(() => {
 });
 
 function renderBookingPage() {
-  render(
-    <MantineProvider>
-      <MemoryRouter initialEntries={['/book/evt_a']}>
-        <App />
-      </MemoryRouter>
-    </MantineProvider>,
-  );
-}
-
-function shownSlots(): (string | null)[] {
-  return within(screen.getByRole('list', { name: 'Slots' }))
-    .getAllByRole('listitem')
-    .map((item) => item.textContent);
+  renderAt('/book/evt_a');
 }
 
 async function chooseTuesdayMorning() {
@@ -252,6 +224,47 @@ test.each([
   // The lost slot is no longer chosen, so the form is gone.
   expect(screen.queryByRole('button', { name: 'Book' })).toBeNull();
   expect(screen.queryByRole('region', { name: 'Booking confirmed' })).toBeNull();
+});
+
+test('when the reload after a conflict fails the stale slots give way to the failure', async () => {
+  const server = fakeServer(() => {
+    server.days = undefined;
+    return slotTaken();
+  });
+  renderBookingPage();
+  await chooseTuesdayMorning();
+  fillIn('Anna Petrova', 'anna@example.com');
+
+  submit();
+
+  expect(await screen.findByText('The slots could not be loaded.')).toBeTruthy();
+  expect(screen.getByRole('alert').textContent).toBe(
+    'Someone else has just booked this time. Choose another one.',
+  );
+  expect(screen.queryByRole('list', { name: 'Slots' })).toBeNull();
+  expect(screen.queryByRole('list', { name: 'Days' })).toBeNull();
+  expect(screen.queryByRole('button', { name: 'Book' })).toBeNull();
+});
+
+test('when the reload after a booking fails the confirmation stays', async () => {
+  const server = fakeServer(() => {
+    server.days = undefined;
+    return json(201, annaAtTuesday);
+  });
+  renderBookingPage();
+  await chooseTuesdayMorning();
+  fillIn('Anna Petrova', 'anna@example.com');
+
+  submit();
+
+  await screen.findByRole('region', { name: 'Booking confirmed' });
+  await waitFor(() => expect(server.slotLoads).toBe(2));
+  expect(screen.getByRole('region', { name: 'Booking confirmed' })).toBeTruthy();
+
+  fireEvent.click(screen.getByRole('button', { name: 'Book another time' }));
+
+  expect(await screen.findByText('The slots could not be loaded.')).toBeTruthy();
+  expect(screen.queryByRole('list', { name: 'Slots' })).toBeNull();
 });
 
 test('choosing another slot after a conflict clears the message', async () => {

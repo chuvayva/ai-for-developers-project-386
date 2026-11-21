@@ -14,8 +14,15 @@ import { failureText } from '../api/failureText.ts';
 import { BookingForm } from '../components/BookingForm.tsx';
 import { formatHostDay, formatHostInterval, formatHostTime, HOST_TIME_ZONE } from '../hostTime.ts';
 
-type Loaded =
-  | { state: 'loaded'; eventType: EventType; days: SlotDay[] }
+/** How loading the event type and its slots ended. */
+type LoadOutcome =
+  | {
+      state: 'loaded';
+      eventType: EventType;
+      days: SlotDay[];
+      /** The last reload of the slots failed, so `days` may show slots that are gone. */
+      slotsAreStale: boolean;
+    }
   | { state: 'not-found' }
   | { state: 'failed'; text: string };
 
@@ -109,10 +116,12 @@ function Confirmation({ booking, onBookAnother }: { booking: Booking; onBookAnot
 function GuestBooking(props: {
   eventType: EventType;
   days: SlotDay[];
+  /** The slots could not be reloaded, so they are not shown. */
+  slotsAreStale: boolean;
   /** Asks the server for the slots again. */
   onSlotsChanged: () => void;
 }) {
-  const { eventType, days, onSlotsChanged } = props;
+  const { eventType, days, slotsAreStale, onSlotsChanged } = props;
   // No choice yet means the first day of the booking window, which is today.
   const [chosenDate, setChosenDate] = useState<string>();
   const [chosenStart, setChosenStart] = useState<string>();
@@ -127,13 +136,36 @@ function GuestBooking(props: {
     return <Confirmation booking={booking} onBookAnother={() => setBooking(undefined)} />;
   }
 
-  return (
+  const heading = (
     <>
       <Title order={1}>{eventType.name}</Title>
       <Text size="sm" c="dimmed">
         {eventType.durationMinutes} min
       </Text>
       {eventType.description && <Text mt="xs">{eventType.description}</Text>}
+    </>
+  );
+  const lostSlotNotice = notice && (
+    <Alert color="red" role="alert" mb="sm">
+      {notice}
+    </Alert>
+  );
+
+  if (slotsAreStale) {
+    return (
+      <>
+        {heading}
+        <Stack mt="xl" gap={0}>
+          {lostSlotNotice}
+          <Text c="red">The slots could not be loaded.</Text>
+        </Stack>
+      </>
+    );
+  }
+
+  return (
+    <>
+      {heading}
 
       <Title order={2} size="h4" mt="xl" mb="sm">
         Choose a day
@@ -155,11 +187,7 @@ function GuestBooking(props: {
           <Text size="sm" c="dimmed" mb="sm">
             Times are in the host time zone, {HOST_TIME_ZONE}.
           </Text>
-          {notice && (
-            <Alert color="red" role="alert" mb="sm">
-              {notice}
-            </Alert>
-          )}
+          {lostSlotNotice}
           <SlotList
             day={chosenDay}
             chosen={chosenSlot}
@@ -204,24 +232,24 @@ function GuestBooking(props: {
 /** Where a guest sees the slots of one event type and books one. */
 export function BookingPage() {
   const { eventTypeId = '' } = useParams();
-  // The answer is kept with the id it is for, so the answer for another id reads as loading.
-  const [answer, setAnswer] = useState<{ eventTypeId: string; loaded: Loaded }>();
-  const loaded = answer?.eventTypeId === eventTypeId ? answer.loaded : undefined;
+  // The outcome is kept with the id it is for, so the outcome for another id reads as loading.
+  const [load, setLoad] = useState<{ eventTypeId: string; outcome: LoadOutcome }>();
+  const outcome = load?.eventTypeId === eventTypeId ? load.outcome : undefined;
 
   useEffect(() => {
     let current = true;
-    const setLoaded = (next: Loaded) => {
+    const setOutcome = (next: LoadOutcome) => {
       if (current) {
-        setAnswer({ eventTypeId, loaded: next });
+        setLoad({ eventTypeId, outcome: next });
       }
     };
 
     Promise.all([getEventType(eventTypeId), listSlots(eventTypeId)]).then(
-      ([eventType, days]) => setLoaded({ state: 'loaded', eventType, days }),
+      ([eventType, days]) => setOutcome({ state: 'loaded', eventType, days, slotsAreStale: false }),
       (error: unknown) => {
         const isNotFound =
           error instanceof ApiRequestError && error.code === 'event_type_not_found';
-        setLoaded(
+        setOutcome(
           isNotFound ? { state: 'not-found' } : { state: 'failed', text: failureText(error) },
         );
       },
@@ -233,26 +261,26 @@ export function BookingPage() {
   }, [eventTypeId]);
 
   function reloadSlots() {
+    const setSlots = (slots: { days?: SlotDay[]; slotsAreStale: boolean }) => {
+      // A reload that ends after the guest left for another event type is dropped.
+      setLoad((current) =>
+        current?.eventTypeId === eventTypeId && current.outcome.state === 'loaded'
+          ? { eventTypeId, outcome: { ...current.outcome, ...slots } }
+          : current,
+      );
+    };
+
     listSlots(eventTypeId).then(
-      (days) => {
-        // An answer that comes after the guest left for another event type is dropped.
-        setAnswer((current) =>
-          current?.eventTypeId === eventTypeId && current.loaded.state === 'loaded'
-            ? { eventTypeId, loaded: { ...current.loaded, days } }
-            : current,
-        );
-      },
-      () => {
-        // The slots on the page stay. The server still refuses one that is gone.
-      },
+      (days) => setSlots({ days, slotsAreStale: false }),
+      () => setSlots({ slotsAreStale: true }),
     );
   }
 
   return (
     <Container size="sm" py="xl">
-      {!loaded && <Text c="dimmed">Loading the slots.</Text>}
-      {loaded?.state === 'failed' && <Text c="red">{loaded.text}</Text>}
-      {loaded?.state === 'not-found' && (
+      {!outcome && <Text c="dimmed">Loading the slots.</Text>}
+      {outcome?.state === 'failed' && <Text c="red">{outcome.text}</Text>}
+      {outcome?.state === 'not-found' && (
         <>
           <Title order={1}>Event type not found</Title>
           <Text c="dimmed" mt="sm">
@@ -260,12 +288,13 @@ export function BookingPage() {
           </Text>
         </>
       )}
-      {loaded?.state === 'loaded' && (
+      {outcome?.state === 'loaded' && (
         // A key of its own, so another event type starts with no chosen day.
         <GuestBooking
-          key={loaded.eventType.id}
-          eventType={loaded.eventType}
-          days={loaded.days}
+          key={outcome.eventType.id}
+          eventType={outcome.eventType}
+          days={outcome.days}
+          slotsAreStale={outcome.slotsAreStale}
           onSlotsChanged={reloadSlots}
         />
       )}

@@ -1,57 +1,18 @@
 import type { components } from '@calendar/api';
-import { MantineProvider } from '@mantine/core';
-import { fireEvent, render, screen, within } from '@testing-library/react';
-import { MemoryRouter } from 'react-router';
+import { fireEvent, screen, within } from '@testing-library/react';
 import { afterEach, expect, test, vi } from 'vitest';
-import { App } from '../App.tsx';
+import { intro, json, renderAt, review, stubApi } from '../testing.tsx';
 
 type Booking = components['schemas']['Booking'];
-type EventType = components['schemas']['EventType'];
 
-function json(status: number, body: unknown): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { 'content-type': 'application/json' },
-  });
-}
-
-/** Stands in for the server at the `fetch` boundary. It answers `listBookings` only. */
+/** A server that answers `listBookings` only. */
 function fakeServer(list: () => Response) {
-  vi.stubGlobal('fetch', async (input: string, init?: RequestInit) => {
-    const request = `${init?.method ?? 'GET'} ${input}`;
-    if (request === 'GET /api/bookings') {
-      return list();
-    }
-    return new Response('Not stubbed', { status: 500 });
-  });
+  stubApi({ 'GET /api/bookings': list });
 }
 
 afterEach(() => {
   vi.unstubAllGlobals();
 });
-
-function renderAt(path: string) {
-  render(
-    <MantineProvider>
-      <MemoryRouter initialEntries={[path]}>
-        <App />
-      </MemoryRouter>
-    </MantineProvider>,
-  );
-}
-
-const intro: EventType = {
-  id: 'evt_a',
-  name: 'Intro call',
-  description: 'A short call to get acquainted.',
-  durationMinutes: 30,
-};
-const review: EventType = {
-  id: 'evt_b',
-  name: 'Code review',
-  description: '',
-  durationMinutes: 60,
-};
 
 // Moscow is UTC+3, so 06:00Z on Monday 23 November 2026 is 09:00 there.
 const annaOnMonday: Booking = {
@@ -69,7 +30,7 @@ const borisOnTuesday: Booking = {
   id: 'bkg_2',
   eventType: review,
   startTime: '2026-11-23T21:30:00Z',
-  endTime: '2026-11-23T22:30:00Z',
+  endTime: '2026-11-23T22:15:00Z',
   guestName: 'Boris Ivanov',
   guestEmail: 'boris@example.com',
   createdAt: '2026-11-21T12:20:00Z',
@@ -87,7 +48,7 @@ test('the page lists the upcoming bookings in the order the server returns them'
   expect(within(first!).getByText('Anna Petrova')).toBeTruthy();
   expect(within(first!).getByText('anna@example.com')).toBeTruthy();
   expect(within(second!).getByRole('heading', { name: 'Code review' })).toBeTruthy();
-  expect(within(second!).getByText('Tue 24 Nov, 00:30 – 01:30')).toBeTruthy();
+  expect(within(second!).getByText('Tue 24 Nov, 00:30 – 01:15')).toBeTruthy();
   expect(within(second!).getByText('Boris Ivanov')).toBeTruthy();
   expect(within(second!).getByText('boris@example.com')).toBeTruthy();
   expect(within(list).getAllByRole('listitem')).toHaveLength(2);

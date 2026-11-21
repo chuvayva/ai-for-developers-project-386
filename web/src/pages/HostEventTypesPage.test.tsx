@@ -1,9 +1,7 @@
 import type { components } from '@calendar/api';
-import { MantineProvider } from '@mantine/core';
-import { fireEvent, render, screen, within } from '@testing-library/react';
-import { MemoryRouter } from 'react-router';
+import { fireEvent, screen, within } from '@testing-library/react';
 import { afterEach, expect, test, vi } from 'vitest';
-import { App } from '../App.tsx';
+import { intro, json, renderAt, review, stubApi } from '../testing.tsx';
 
 type EventType = components['schemas']['EventType'];
 
@@ -12,14 +10,7 @@ type FakeApi = {
   created: unknown[];
 };
 
-function json(status: number, body: unknown): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { 'content-type': 'application/json' },
-  });
-}
-
-/** Stands in for the server at the `fetch` boundary. */
+/** A server that keeps the event types it is sent, as the real one does. */
 function fakeApi(options: {
   eventTypes?: EventType[];
   list?: () => Response;
@@ -28,21 +19,17 @@ function fakeApi(options: {
   const eventTypes = [...(options.eventTypes ?? [])];
   const api: FakeApi = { created: [] };
 
-  vi.stubGlobal('fetch', async (input: string, init?: RequestInit) => {
-    if (input !== '/api/event-types') {
-      return json(404, {});
-    }
-    if (init?.method === 'POST') {
-      const body = JSON.parse(String(init.body));
+  stubApi({
+    'GET /api/event-types': () => (options.list ? options.list() : json(200, eventTypes)),
+    'POST /api/event-types': (body) => {
       api.created.push(body);
       if (options.create) {
         return options.create();
       }
-      const eventType = { id: `evt_${eventTypes.length + 1}`, ...body };
+      const eventType = { id: `evt_${eventTypes.length + 1}`, ...(body as Omit<EventType, 'id'>) };
       eventTypes.push(eventType);
       return json(201, eventType);
-    }
-    return options.list ? options.list() : json(200, eventTypes);
+    },
   });
 
   return api;
@@ -53,13 +40,7 @@ afterEach(() => {
 });
 
 async function openPage() {
-  render(
-    <MantineProvider>
-      <MemoryRouter initialEntries={['/host/event-types']}>
-        <App />
-      </MemoryRouter>
-    </MantineProvider>,
-  );
+  renderAt('/host/event-types');
   // The form is usable once the list has loaded or failed to load.
   await screen.findByRole('button', { name: 'Create event type' });
 }
@@ -88,19 +69,6 @@ async function listedNames() {
     .getAllByRole('heading')
     .map((heading) => heading.textContent);
 }
-
-const intro: EventType = {
-  id: 'evt_a',
-  name: 'Intro call',
-  description: 'A short call to get acquainted.',
-  durationMinutes: 30,
-};
-const review: EventType = {
-  id: 'evt_b',
-  name: 'Code review',
-  description: '',
-  durationMinutes: 45,
-};
 
 test('the page lists the event types in the order the server returns them', async () => {
   fakeApi({ eventTypes: [review, intro] });
