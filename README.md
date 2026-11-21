@@ -1,29 +1,41 @@
 # Календарь звонков
 
-
 [![hexlet-check](https://github.com/chuvayva/ai-for-developers-project-386/actions/workflows/hexlet-check.yml/badge.svg)](https://github.com/chuvayva/ai-for-developers-project-386/actions)
 
 Разработайте совместно с ИИ сервис для бронирования календаря
 
-Учебный проект Хекслета: https://ru.hexlet.io/programs/ai-for-developers
 Как это должно работать: https://files.hexlet.app/a/2ipc5m
 
 ## Стек
 
-- Разное
+- TypeScript and Vite
+- UI is on Mantine
+- API first with TypeSpec, OpenAPI specification
 
 ## Установка
 
-<!-- Опишите установку: клонирование, зависимости, переменные окружения -->
+Нужен [mise](https://mise.jdx.dev/). Он ставит Node и pnpm нужных версий из `mise.toml`.
 
 ```bash
 git clone https://github.com/chuvayva/ai-for-developers-project-386.git
 cd ai-for-developers-project-386
+mise trust
+mise install
+mise run check
 ```
+
+`mise run check` ставит зависимости, генерирует OpenAPI из TypeSpec, проверяет типы, запускает тесты и собирает фронтенд.
 
 ## Использование
 
-<!-- Добавьте примеры запуска и запись asciinema — именно это смотрит работодатель -->
+Сервер и фронтенд запускаются в двух терминалах.
+
+```bash
+pnpm --filter @calendar/server dev   # API на http://127.0.0.1:3000
+pnpm --filter @calendar/web dev      # интерфейс на http://localhost:5173
+```
+
+Контракт API описан в `api/main.tsp`. Команда `pnpm --filter @calendar/api build` собирает из него `api/generated/openapi.yaml` и типы TypeScript для сервера и фронтенда.
 
 ---
 

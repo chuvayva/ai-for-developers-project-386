@@ -1,0 +1,13 @@
+[tools]
+node = "24"
+pnpm = "12"
+
+[tasks.check]
+description = "Install dependencies, generate the API contract, typecheck, test and build"
+run = [
+  "pnpm install",
+  "pnpm --filter @calendar/api build",
+  "pnpm -r typecheck",
+  "pnpm -r test",
+  "pnpm --filter @calendar/web build",
+]
