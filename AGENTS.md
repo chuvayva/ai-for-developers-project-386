@@ -45,6 +45,10 @@ The server follows the Fastify Getting Started and Testing guides. `server/src/a
 
 Data lives in memory in the store that `server/src/store.ts` creates. `build()` makes one store and passes it to the route plugins as a plugin option, so every app starts empty.
 
+`build()` also takes a `now` option, a function that returns the current moment. Tests set it to fix the clock. Read the time through it and never through `new Date()` in a route.
+
+`server/src/slots.ts` is the one place that applies the slot rules of the contract. It takes the current moment and the bookings as inputs and does its day and hour arithmetic in Europe/Moscow, whatever zone the process runs in.
+
 To fail a request, throw `ApiFailure` from `server/src/errors.ts` with a code of the contract. The error handler registered there turns it, and every failure Fastify raises while it reads a request, into the contract's `ApiError`.
 
 Node runs the TypeScript sources directly through type stripping, with no build step. Two rules follow from that:
@@ -57,6 +61,8 @@ Node runs the TypeScript sources directly through type stripping, with no build 
 Render components under test inside `MantineProvider`. `web/src/test-setup.ts` stubs `matchMedia` and `ResizeObserver`, which jsdom lacks and Mantine calls.
 
 Pages call the API through the functions in `web/src/api/client.ts`. A failed request throws `ApiRequestError`, and `failureText` in `web/src/api/failureText.ts` chooses the text to show from its code. Component tests stand in for the server by stubbing `fetch`.
+
+Show every time and day through the functions in `web/src/hostTime.ts`. They write it in the host time zone, Europe/Moscow, whatever zone the browser is in.
 
 The Vite dev server proxies `/api` to the backend on `127.0.0.1:3000`. The `API_ORIGIN` environment variable overrides that address.
 
