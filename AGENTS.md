@@ -31,13 +31,13 @@ Lint rules stay on. When a rule cannot be satisfied, stop and ask for a human de
 
 ## End-to-end tests
 
-`mise run e2e` runs the Playwright tests in `e2e/tests/` in Chromium. It is a separate command and a separate CI job. `mise run check` and the push hook do not run it.
+`mise run e2e` runs the Playwright tests in `e2e/tests/` in Chromium. It is a separate command and a separate CI job, in `.github/workflows/e2e.yml`, which runs on every push and pull request. `mise run check` and the push hook do not run it.
 
 The command starts its own server on `127.0.0.1:3100` and its own Vite dev server on `localhost:5273`, runs the tests and stops both. It fails when one of those ports is taken. `mise run dev` uses other ports, so both can run at once. The first run downloads Chromium.
 
 Every run starts with no event types and no bookings, and all test files share that one server. A test creates the data it needs and uses names of its own, so that tests do not depend on each other. Tests choose slots relative to today. Do not fix the clock.
 
-A booking takes its interval from every event type, and the tests run in parallel. A test that books uses a day of the booking window that no other test books on, and never fills that day. `e2e/tests/guest-booking.spec.ts` uses days 5 and 7 after today, and `e2e/tests/host-bookings.spec.ts` uses day 9. Tomorrow stays free of bookings.
+A booking takes its interval from every event type, and the tests run in parallel. A test that books uses a day of the booking window that no other test books on, and never fills that day. `e2e/tests/guest-booking.spec.ts` uses days 5 and 7 after today, and `e2e/tests/host-bookings.spec.ts` uses day 9. Tomorrow stays free of bookings. `e2e/tests/helpers.ts` holds the steps the test files share.
 
 Add or update an end-to-end test when a change adds or alters something a user does in the browser across the web and the server, such as creating an event type or booking a slot. Server rules and component details stay in the `server` and `web` tests.
 
@@ -64,7 +64,7 @@ Node runs the TypeScript sources directly through type stripping, with no build 
 
 Render components under test inside `MantineProvider`. `web/src/test-setup.ts` stubs `matchMedia` and `ResizeObserver`, which jsdom lacks and Mantine calls.
 
-Pages call the API through the functions in `web/src/api/client.ts`. A failed request throws `ApiRequestError`, and `failureText` in `web/src/api/failureText.ts` chooses the text to show from its code. Component tests stand in for the server by stubbing `fetch`.
+Pages call the API through the functions in `web/src/api/client.ts`. A failed request throws `ApiRequestError`, and `failureText` in `web/src/api/failureText.ts` chooses the text to show from its code. Component tests stand in for the server by stubbing `fetch`, with the helpers in `web/src/testing.tsx`.
 
 Show every time and day through the functions in `web/src/hostTime.ts`. They write it in the host time zone, Europe/Moscow, whatever zone the browser is in.
 
