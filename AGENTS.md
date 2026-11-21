@@ -58,6 +58,10 @@ Commit messages follow [Conventional Commits](https://www.conventionalcommits.or
 
 Example: `feat(api): add booking slots endpoint`.
 
+## Releases
+
+release-please reads those commit messages on every push to `main` and keeps one release PR open with the next version and the `CHANGELOG.md` entry. The whole repo shares one version, kept in the root `package.json` and `.release-please-manifest.json`, with tags of the form `v1.2.3`. Merging the release PR tags the release and publishes it on GitHub. The release PR is titled `chore: release <version>` so that its commit passes commitlint.
+
 ## Hexlet
 
 `.github/workflows/hexlet-check.yml` belongs to Hexlet's automated checks. Leave it and the repository name unchanged.
