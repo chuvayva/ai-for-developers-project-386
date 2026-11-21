@@ -33,7 +33,7 @@ hooks {
     ["commit-msg"] {
         steps {
             ["commitlint"] {
-                check = "pnpm exec commitlint --edit {{commit_msg_file}}"
+                check = "pnpm exec commitlint --edit \"{{commit_msg_file}}\""
             }
         }
     }
