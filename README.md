@@ -29,11 +29,23 @@ mise run check
 
 ## Использование
 
-Сервер и фронтенд запускаются в двух терминалах.
+Одна команда запускает сервер и фронтенд вместе, `Ctrl+C` останавливает оба.
 
 ```bash
-pnpm --filter @calendar/server dev   # API на http://127.0.0.1:3000
-pnpm --filter @calendar/web dev      # интерфейс на http://localhost:5173
+mise run dev      # API на http://127.0.0.1:3000 и интерфейс на http://localhost:5173
+```
+
+Их можно запустить и по отдельности.
+
+```bash
+mise run server   # только API
+mise run web      # только интерфейс
+```
+
+Проверить, что сервер отвечает:
+
+```bash
+curl http://127.0.0.1:3000/api/health   # {"status":"ok"}
 ```
 
 Контракт API описан в `api/main.tsp`. Команда `pnpm --filter @calendar/api build` собирает из него `api/generated/openapi.yaml` и типы TypeScript для сервера и фронтенда.

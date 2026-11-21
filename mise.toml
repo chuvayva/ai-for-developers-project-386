@@ -17,3 +17,15 @@ run = ["pnpm install --frozen-lockfile", "hk check --all"]
 [tasks.fix]
 description = "Apply the safe automatic fixes"
 run = "hk fix --all"
+
+[tasks.server]
+description = "Start the API on http://127.0.0.1:3000, restarting on changes"
+run = "pnpm --filter @calendar/server dev"
+
+[tasks.web]
+description = "Start the interface on http://localhost:5173"
+run = "pnpm --filter @calendar/web dev"
+
+[tasks.dev]
+description = "Start the API and the interface together"
+depends = ["server", "web"]

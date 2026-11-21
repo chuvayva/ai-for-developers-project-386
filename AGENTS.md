@@ -24,6 +24,8 @@ Every change to the HTTP API starts in `api/main.tsp`. `pnpm --filter @calendar/
 
 Lint rules stay on. When a rule cannot be satisfied, stop and ask for a human decision. An approved exception names one path and one rule and records the reason.
 
+`mise run dev` starts the API and the interface together. `mise run server` and `mise run web` start one of them.
+
 `mise.toml` pins every tool. Run `pnpm` and `node` through mise (`mise exec -- pnpm ...`) when the shell has no mise activation.
 
 ## Server
