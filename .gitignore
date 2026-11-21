@@ -6,3 +6,4 @@ api/generated/
 .env.*
 !.env.example
 .DS_Store
+.claude/worktrees/
