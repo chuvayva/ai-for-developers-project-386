@@ -22,6 +22,13 @@ test('home page links to the booking page', () => {
   expect(link.getAttribute('href')).toBe('/book');
 });
 
+test('home page links to the host event types page', () => {
+  renderAt('/');
+
+  const link = screen.getByRole('link', { name: 'Event types' });
+  expect(link.getAttribute('href')).toBe('/host/event-types');
+});
+
 test('following the home page link opens the booking page', () => {
   renderAt('/');
 

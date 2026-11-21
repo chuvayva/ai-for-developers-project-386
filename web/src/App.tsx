@@ -1,6 +1,7 @@
 import { Route, Routes } from 'react-router';
 import { BookingPage } from './pages/BookingPage.tsx';
 import { HomePage } from './pages/HomePage.tsx';
+import { HostEventTypesPage } from './pages/HostEventTypesPage.tsx';
 import { NotFoundPage } from './pages/NotFoundPage.tsx';
 
 export function App() {
@@ -8,6 +9,7 @@ export function App() {
     <Routes>
       <Route path="/" element={<HomePage />} />
       <Route path="/book" element={<BookingPage />} />
+      <Route path="/host/event-types" element={<HostEventTypesPage />} />
       <Route path="*" element={<NotFoundPage />} />
     </Routes>
   );

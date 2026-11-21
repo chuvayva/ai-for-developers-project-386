@@ -1,4 +1,4 @@
-import { Button, Container, Text, Title } from '@mantine/core';
+import { Anchor, Button, Container, Text, Title } from '@mantine/core';
 import { Link } from 'react-router';
 
 export function HomePage() {
@@ -11,6 +11,13 @@ export function HomePage() {
       <Button component={Link} to="/book" mt="lg">
         Book a call
       </Button>
+
+      <Title order={2} size="h4" mt="xl">
+        For the host
+      </Title>
+      <Anchor component={Link} to="/host/event-types" mt="xs" display="inline-block">
+        Event types
+      </Anchor>
     </Container>
   );
 }
