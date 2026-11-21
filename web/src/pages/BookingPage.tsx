@@ -1,15 +1,18 @@
-import { Anchor, Button, Container, Group, Stack, Text, Title } from '@mantine/core';
+import { Alert, Anchor, Button, Container, Group, Paper, Stack, Text, Title } from '@mantine/core';
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router';
 import {
   ApiRequestError,
+  type Booking,
   type EventType,
   getEventType,
   listSlots,
+  type Slot,
   type SlotDay,
 } from '../api/client.ts';
 import { failureText } from '../api/failureText.ts';
-import { formatHostDay, formatHostTime, HOST_TIME_ZONE } from '../hostTime.ts';
+import { BookingForm } from '../components/BookingForm.tsx';
+import { formatHostDay, formatHostInterval, formatHostTime, HOST_TIME_ZONE } from '../hostTime.ts';
 
 type Loaded =
   | { state: 'loaded'; eventType: EventType; days: SlotDay[] }
@@ -48,26 +51,81 @@ function DayPicker(props: { days: SlotDay[]; chosen: string; onChoose: (date: st
   );
 }
 
-function SlotList({ day }: { day: SlotDay }) {
-  if (day.slots.length === 0) {
+function SlotList(props: { day: SlotDay; chosen?: Slot; onChoose: (slot: Slot) => void }) {
+  if (props.day.slots.length === 0) {
     return <Text c="dimmed">There are no slots on this day.</Text>;
   }
 
   return (
     <Group component="ul" aria-label="Slots" gap="xs" p={0} m={0} style={{ listStyle: 'none' }}>
-      {day.slots.map((slot) => (
-        <Text component="li" key={slot.startTime} px="sm" py={4} bd="1px solid gray.4" bdrs="sm">
-          {formatHostTime(slot.startTime)} – {formatHostTime(slot.endTime)}
-        </Text>
+      {props.day.slots.map((slot) => (
+        <li key={slot.startTime}>
+          <Button
+            variant={slot === props.chosen ? 'filled' : 'default'}
+            aria-pressed={slot === props.chosen}
+            onClick={() => props.onChoose(slot)}
+          >
+            {formatHostTime(slot.startTime)} – {formatHostTime(slot.endTime)}
+          </Button>
+        </li>
       ))}
     </Group>
   );
 }
 
-function SlotPicker({ eventType, days }: { eventType: EventType; days: SlotDay[] }) {
+function Confirmation({ booking, onBookAnother }: { booking: Booking; onBookAnother: () => void }) {
+  return (
+    <section aria-labelledby="booking-confirmed">
+      <Title order={1} id="booking-confirmed">
+        Booking confirmed
+      </Title>
+      <Paper withBorder p="md" mt="lg">
+        <Stack gap="xs">
+          <div>
+            <Text fw={600}>{booking.eventType.name}</Text>
+            <Text size="sm" c="dimmed">
+              {booking.eventType.durationMinutes} min
+            </Text>
+          </div>
+          <div>
+            <Text>{formatHostInterval(booking.startTime, booking.endTime)}</Text>
+            <Text size="sm" c="dimmed">
+              Host time zone, {HOST_TIME_ZONE}
+            </Text>
+          </div>
+          <div>
+            <Text>{booking.guestName}</Text>
+            <Text>{booking.guestEmail}</Text>
+          </div>
+        </Stack>
+      </Paper>
+      <Button variant="default" mt="lg" onClick={onBookAnother}>
+        Book another time
+      </Button>
+    </section>
+  );
+}
+
+function GuestBooking(props: {
+  eventType: EventType;
+  days: SlotDay[];
+  /** Asks the server for the slots again. */
+  onSlotsChanged: () => void;
+}) {
+  const { eventType, days, onSlotsChanged } = props;
   // No choice yet means the first day of the booking window, which is today.
   const [chosenDate, setChosenDate] = useState<string>();
-  const chosen = days.find((day) => day.date === chosenDate) ?? days[0];
+  const [chosenStart, setChosenStart] = useState<string>();
+  const [booking, setBooking] = useState<Booking>();
+  const [notice, setNotice] = useState<string>();
+
+  const chosenDay = days.find((day) => day.date === chosenDate) ?? days[0];
+  // A slot that a reload no longer offers stops being chosen.
+  const chosenSlot = chosenDay?.slots.find((slot) => slot.startTime === chosenStart);
+
+  if (booking) {
+    return <Confirmation booking={booking} onBookAnother={() => setBooking(undefined)} />;
+  }
 
   return (
     <>
@@ -80,24 +138,70 @@ function SlotPicker({ eventType, days }: { eventType: EventType; days: SlotDay[]
       <Title order={2} size="h4" mt="xl" mb="sm">
         Choose a day
       </Title>
-      <DayPicker days={days} chosen={chosen?.date ?? ''} onChoose={setChosenDate} />
+      <DayPicker
+        days={days}
+        chosen={chosenDay?.date ?? ''}
+        onChoose={(date) => {
+          setChosenDate(date);
+          setChosenStart(undefined);
+        }}
+      />
 
-      {chosen && (
+      {chosenDay && (
         <>
           <Title order={2} size="h4" mt="xl">
-            {formatHostDay(chosen.date)}
+            {formatHostDay(chosenDay.date)}
           </Title>
           <Text size="sm" c="dimmed" mb="sm">
             Times are in the host time zone, {HOST_TIME_ZONE}.
           </Text>
-          <SlotList day={chosen} />
+          {notice && (
+            <Alert color="red" role="alert" mb="sm">
+              {notice}
+            </Alert>
+          )}
+          <SlotList
+            day={chosenDay}
+            chosen={chosenSlot}
+            onChoose={(slot) => {
+              setChosenStart(slot.startTime);
+              setNotice(undefined);
+            }}
+          />
+        </>
+      )}
+
+      {chosenSlot && (
+        <>
+          <Title order={2} size="h4" mt="xl">
+            Your details
+          </Title>
+          <Text size="sm" c="dimmed" mb="sm">
+            {formatHostInterval(chosenSlot.startTime, chosenSlot.endTime)}
+          </Text>
+          <BookingForm
+            // A key of its own, so another slot starts with no failure shown.
+            key={chosenSlot.startTime}
+            eventType={eventType}
+            slot={chosenSlot}
+            onBooked={(booked) => {
+              setBooking(booked);
+              setChosenStart(undefined);
+              onSlotsChanged();
+            }}
+            onSlotLost={(text) => {
+              setNotice(text);
+              setChosenStart(undefined);
+              onSlotsChanged();
+            }}
+          />
         </>
       )}
     </>
   );
 }
 
-/** Where a guest sees the slots of one event type. */
+/** Where a guest sees the slots of one event type and books one. */
 export function BookingPage() {
   const { eventTypeId = '' } = useParams();
   // The answer is kept with the id it is for, so the answer for another id reads as loading.
@@ -128,6 +232,22 @@ export function BookingPage() {
     };
   }, [eventTypeId]);
 
+  function reloadSlots() {
+    listSlots(eventTypeId).then(
+      (days) => {
+        // An answer that comes after the guest left for another event type is dropped.
+        setAnswer((current) =>
+          current?.eventTypeId === eventTypeId && current.loaded.state === 'loaded'
+            ? { eventTypeId, loaded: { ...current.loaded, days } }
+            : current,
+        );
+      },
+      () => {
+        // The slots on the page stay. The server still refuses one that is gone.
+      },
+    );
+  }
+
   return (
     <Container size="sm" py="xl">
       {!loaded && <Text c="dimmed">Loading the slots.</Text>}
@@ -142,7 +262,12 @@ export function BookingPage() {
       )}
       {loaded?.state === 'loaded' && (
         // A key of its own, so another event type starts with no chosen day.
-        <SlotPicker key={loaded.eventType.id} eventType={loaded.eventType} days={loaded.days} />
+        <GuestBooking
+          key={loaded.eventType.id}
+          eventType={loaded.eventType}
+          days={loaded.days}
+          onSlotsChanged={reloadSlots}
+        />
       )}
 
       <Anchor component={Link} to="/book" mt="xl" display="block">

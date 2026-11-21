@@ -28,6 +28,23 @@ export function formatHostTime(timestamp: string): string {
   return `${read('hour')}:${read('minute')}`;
 }
 
+// The en-CA locale writes a date as 2026-11-23, the way the contract does.
+const hostDateFormat = new Intl.DateTimeFormat('en-CA', {
+  timeZone: HOST_TIME_ZONE,
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+});
+
+/**
+ * An interval between two timestamps with its day in the host time zone, as in
+ * `Mon 23 Nov, 09:00 – 09:30`. A slot and a booking start and end on one day.
+ */
+export function formatHostInterval(startTime: string, endTime: string): string {
+  const day = formatHostDay(hostDateFormat.format(new Date(startTime)));
+  return `${day}, ${formatHostTime(startTime)} – ${formatHostTime(endTime)}`;
+}
+
 /** A plain date of the contract such as `2026-11-23`, as in `Mon 23 Nov`. */
 export function formatHostDay(date: string): string {
   const parts = dayFormat.formatToParts(new Date(`${date}T00:00:00Z`));

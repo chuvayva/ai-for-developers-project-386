@@ -5,6 +5,8 @@ export type EventType = components['schemas']['EventType'];
 export type Slot = components['schemas']['Slot'];
 export type SlotDay = components['schemas']['SlotDay'];
 export type CreateEventTypeRequest = components['schemas']['CreateEventTypeRequest'];
+export type Booking = components['schemas']['Booking'];
+export type CreateBookingRequest = components['schemas']['CreateBookingRequest'];
 
 /**
  * A request the server answered with a failure. `code` is the `ApiError` code,
@@ -64,4 +66,8 @@ export function listSlots(eventTypeId: string): Promise<SlotDay[]> {
 
 export function createEventType(body: CreateEventTypeRequest): Promise<EventType> {
   return post('/event-types', body);
+}
+
+export function createBooking(body: CreateBookingRequest): Promise<Booking> {
+  return post('/bookings', body);
 }
