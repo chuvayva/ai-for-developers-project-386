@@ -43,6 +43,10 @@ Add or update an end-to-end test when a change adds or alters something a user d
 
 The server follows the Fastify Getting Started and Testing guides. `server/src/app.ts` exports `build(opts)`, which registers route plugins and never listens. `server/src/main.ts` is the only file that calls `listen`. Each group of routes is a plugin in `server/src/routes/`, registered under the `/api` prefix. Tests call `build()` and use `app.inject()`.
 
+Data lives in memory in the store that `server/src/store.ts` creates. `build()` makes one store and passes it to the route plugins as a plugin option, so every app starts empty.
+
+To fail a request, throw `ApiFailure` from `server/src/errors.ts` with a code of the contract. The error handler registered there turns it, and every failure Fastify raises while it reads a request, into the contract's `ApiError`.
+
 Node runs the TypeScript sources directly through type stripping, with no build step. Two rules follow from that:
 
 - Relative imports carry the `.ts` extension.
@@ -51,6 +55,8 @@ Node runs the TypeScript sources directly through type stripping, with no build 
 ## Web
 
 Render components under test inside `MantineProvider`. `web/src/test-setup.ts` stubs `matchMedia` and `ResizeObserver`, which jsdom lacks and Mantine calls.
+
+Pages call the API through the functions in `web/src/api/client.ts`. A failed request throws `ApiRequestError`, and `failureText` in `web/src/api/failureText.ts` chooses the text to show from its code. Component tests stand in for the server by stubbing `fetch`.
 
 The Vite dev server proxies `/api` to the backend on `127.0.0.1:3000`. The `API_ORIGIN` environment variable overrides that address.
 
