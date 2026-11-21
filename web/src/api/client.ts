@@ -68,6 +68,11 @@ export function createEventType(body: CreateEventTypeRequest): Promise<EventType
   return post('/event-types', body);
 }
 
+/** The upcoming bookings, which have not ended yet, the soonest first. */
+export function listBookings(): Promise<Booking[]> {
+  return request('/bookings');
+}
+
 export function createBooking(body: CreateBookingRequest): Promise<Booking> {
   return post('/bookings', body);
 }
