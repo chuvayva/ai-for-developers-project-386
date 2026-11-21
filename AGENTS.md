@@ -59,3 +59,17 @@ Example: `feat(api): add booking slots endpoint`.
 ## Hexlet
 
 `.github/workflows/hexlet-check.yml` belongs to Hexlet's automated checks. Leave it and the repository name unchanged.
+
+## Agent skills
+
+### Issue tracker
+
+Issues live in this repo's GitHub Issues, through the `gh` CLI. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+The five default triage labels, each named after its role. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context: one `GLOSSARY.md` and `docs/adr/` at the repo root. See `docs/agents/domain.md`.
