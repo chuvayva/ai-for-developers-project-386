@@ -1,28 +1,12 @@
 import { randomUUID } from 'node:crypto';
-import { type APIRequestContext, expect, type Page, test } from '@playwright/test';
+import { expect, test } from '@playwright/test';
+import { createHourCall, openDay } from './helpers.ts';
 
 // Bookings block slots across event types, and every test file shares one server.
 // Each test here books on a day of its own, counted from today, that no other
 // test books on, and takes one slot of the nine that day has.
 const DAY_OF_THE_BOOKING_TEST = 5;
 const DAY_OF_THE_CONFLICT_TEST = 7;
-
-async function createHourCall(request: APIRequestContext, name: string): Promise<string> {
-  const created = await request.post('/api/event-types', {
-    data: { name, description: 'A call to book.', durationMinutes: 60 },
-  });
-  expect(created.status()).toBe(201);
-  const eventType: { id: string } = await created.json();
-  return eventType.id;
-}
-
-/** Opens the booking page of the event type on a day of the booking window. */
-async function openDay(page: Page, eventTypeId: string, daysFromToday: number) {
-  await page.goto(`/book/${eventTypeId}`);
-  const day = page.getByRole('list', { name: 'Days' }).getByRole('button').nth(daysFromToday);
-  await day.click();
-  await expect(day).toHaveAttribute('aria-pressed', 'true');
-}
 
 test('a guest books a slot, sees the confirmation and the slot is gone', async ({
   page,

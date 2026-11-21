@@ -17,8 +17,8 @@ const MINUTE = 60_000;
 /** The interval of a booking. Any offset is read as the moment it names. */
 export type BookedInterval = { startTime: string; endTime: string };
 
-export type SlotQuestion = {
-  /** The duration of the event type whose slots are asked for. */
+export type SlotInputs = {
+  /** The duration of the event type whose slots are computed. */
   durationMinutes: number;
   /** The current moment. */
   now: Date;
@@ -80,10 +80,10 @@ export function toTimestamp(moment: number): string {
  *
  * This is the one place that applies the five slot rules of the contract.
  */
-export function listSlotDays(question: SlotQuestion): SlotDay[] {
-  const { durationMinutes } = question;
-  const now = question.now.getTime();
-  const booked = question.bookings.map((booking) => ({
+export function listSlotDays(inputs: SlotInputs): SlotDay[] {
+  const { durationMinutes } = inputs;
+  const now = inputs.now.getTime();
+  const booked = inputs.bookings.map((booking) => ({
     start: Date.parse(booking.startTime),
     end: Date.parse(booking.endTime),
   }));
@@ -127,29 +127,29 @@ export function listSlotDays(question: SlotQuestion): SlotDay[] {
 }
 
 /** What a start time is for an event type at this moment. */
-export type StartTimeAnswer =
+export type StartTimeCheck =
   /** A slot: `listSlotDays` offers it. */
-  | { is: 'slot'; slot: Slot }
+  | { status: 'slot'; slot: Slot }
   /** It passes every slot rule but the overlap: a booking covers part of its interval. */
-  | { is: 'taken' }
+  | { status: 'taken' }
   /** It breaks a slot rule other than the overlap. */
-  | { is: 'not-a-slot' };
+  | { status: 'not-a-slot' };
 
 /**
  * Says whether a start time can be booked. It asks `listSlotDays`, so the
- * answer is `slot` exactly for the start times that function offers.
+ * status is `slot` exactly for the start times that function offers.
  */
-export function checkStartTime(question: SlotQuestion, startTime: Date): StartTimeAnswer {
+export function checkStartTime(inputs: SlotInputs, startTime: Date): StartTimeCheck {
   const start = startTime.getTime();
-  const find = (bookings: readonly BookedInterval[]) =>
-    listSlotDays({ ...question, bookings })
+  const offeredSlot = (bookings: readonly BookedInterval[]) =>
+    listSlotDays({ ...inputs, bookings })
       .flatMap((day) => day.slots)
       .find((slot) => Date.parse(slot.startTime) === start);
 
   // With no bookings only the overlap rule is left out.
-  if (!find([])) {
-    return { is: 'not-a-slot' };
+  if (!offeredSlot([])) {
+    return { status: 'not-a-slot' };
   }
-  const slot = find(question.bookings);
-  return slot ? { is: 'slot', slot } : { is: 'taken' };
+  const slot = offeredSlot(inputs.bookings);
+  return slot ? { status: 'slot', slot } : { status: 'taken' };
 }

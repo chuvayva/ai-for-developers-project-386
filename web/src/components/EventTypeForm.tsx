@@ -2,6 +2,7 @@ import { Alert, Button, NumberInput, Stack, Textarea, TextInput } from '@mantine
 import { type FormEvent, useState } from 'react';
 import { createEventType, type EventType } from '../api/client.ts';
 import { failureText } from '../api/failureText.ts';
+import { characters } from './characters.ts';
 
 type Values = {
   name: string;
@@ -13,11 +14,6 @@ type Values = {
 type FieldErrors = Partial<Record<keyof Values, string>>;
 
 const emptyValues: Values = { name: '', description: '', duration: 30 };
-
-// The contract counts characters as code points, as the server does.
-function characters(text: string): number {
-  return [...text].length;
-}
 
 /** The field limits of `CreateEventTypeRequest` in the contract. */
 function checkLimits({ name, description, duration }: Values): FieldErrors {

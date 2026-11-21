@@ -20,11 +20,16 @@ const dayFormat = new Intl.DateTimeFormat('en-GB', {
   month: 'short',
 });
 
+/** Reads one part, such as the hour, of a date written in a format. */
+function partReader(format: Intl.DateTimeFormat, date: Date) {
+  const parts = format.formatToParts(date);
+  return (type: Intl.DateTimeFormatPartTypes) =>
+    parts.find((part) => part.type === type)?.value ?? '';
+}
+
 /** The time of day of a timestamp in the host time zone, as in `09:00`. */
 export function formatHostTime(timestamp: string): string {
-  const parts = timeFormat.formatToParts(new Date(timestamp));
-  const read = (type: Intl.DateTimeFormatPartTypes) =>
-    parts.find((part) => part.type === type)?.value ?? '';
+  const read = partReader(timeFormat, new Date(timestamp));
   return `${read('hour')}:${read('minute')}`;
 }
 
@@ -47,8 +52,6 @@ export function formatHostInterval(startTime: string, endTime: string): string {
 
 /** A plain date of the contract such as `2026-11-23`, as in `Mon 23 Nov`. */
 export function formatHostDay(date: string): string {
-  const parts = dayFormat.formatToParts(new Date(`${date}T00:00:00Z`));
-  const read = (type: Intl.DateTimeFormatPartTypes) =>
-    parts.find((part) => part.type === type)?.value ?? '';
+  const read = partReader(dayFormat, new Date(`${date}T00:00:00Z`));
   return `${read('weekday')} ${read('day')} ${read('month')}`;
 }

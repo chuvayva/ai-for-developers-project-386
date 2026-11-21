@@ -8,15 +8,11 @@ import {
   type Slot,
 } from '../api/client.ts';
 import { failureText } from '../api/failureText.ts';
+import { characters } from './characters.ts';
 
 type Values = { guestName: string; guestEmail: string };
 
 type FieldErrors = Partial<Record<keyof Values, string>>;
-
-// The contract counts characters as code points, as the server does.
-function characters(text: string): number {
-  return [...text].length;
-}
 
 // What the server takes for an email: dot-separated words, an @ and a host name with a dot.
 const word = "[a-z0-9!#$%&'*+/=?^_`{|}~-]+";

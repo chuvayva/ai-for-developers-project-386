@@ -45,9 +45,13 @@ The one time zone, Europe/Moscow, in which working hours and calendar days are m
 _Avoid_: Server time, local time
 
 **Home page**:
-The entry page of the service, which leads a guest to the booking page.
+The entry page of the service, which leads a guest to the guest event types page.
 _Avoid_: Landing page, main page, index
 
+**Guest event types page**:
+The page where a guest chooses an event type. It leads to the booking page of that event type.
+_Avoid_: Catalogue, services page, booking page
+
 **Booking page**:
-The page where a guest picks a free time and books a call. In Russian, «страница записи».
+The page where a guest picks a slot of one event type and books a call. In Russian, «страница записи».
 _Avoid_: Scheduling page, reservation page, appointment page

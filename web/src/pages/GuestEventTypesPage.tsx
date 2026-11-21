@@ -1,9 +1,7 @@
 import { Anchor, Container, Paper, Stack, Text, Title } from '@mantine/core';
-import { useEffect, useState } from 'react';
 import { Link } from 'react-router';
 import { type EventType, listEventTypes } from '../api/client.ts';
-
-type Loading = 'loading' | 'loaded' | 'failed';
+import { useLoadOnMount } from '../useLoadOnMount.ts';
 
 function EventTypeChoice({ eventTypes }: { eventTypes: EventType[] }) {
   if (eventTypes.length === 0) {
@@ -31,30 +29,7 @@ function EventTypeChoice({ eventTypes }: { eventTypes: EventType[] }) {
 
 /** Where a guest chooses the kind of call to book. */
 export function GuestEventTypesPage() {
-  const [eventTypes, setEventTypes] = useState<EventType[]>([]);
-  const [loading, setLoading] = useState<Loading>('loading');
-
-  useEffect(() => {
-    let current = true;
-
-    listEventTypes().then(
-      (loaded) => {
-        if (current) {
-          setEventTypes(loaded);
-          setLoading('loaded');
-        }
-      },
-      () => {
-        if (current) {
-          setLoading('failed');
-        }
-      },
-    );
-
-    return () => {
-      current = false;
-    };
-  }, []);
+  const { value: eventTypes, loading } = useLoadOnMount(listEventTypes, []);
 
   return (
     <Container size="sm" py="xl">

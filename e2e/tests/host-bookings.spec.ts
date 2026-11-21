@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { expect, test } from '@playwright/test';
+import { createHourCall, openDay } from './helpers.ts';
 
 // Bookings block slots across event types, and every test file shares one server.
 // This test books on a day of its own, counted from today, that no other test
@@ -14,16 +15,8 @@ test('a guest books a slot and the host sees it among the upcoming bookings', as
   const eventTypeName = `Listed call ${id}`;
   // The other tests' bookings are listed too, so this one is found by its guest.
   const guestName = `Guest ${id}`;
-  const created = await request.post('/api/event-types', {
-    data: { name: eventTypeName, description: 'A call to book.', durationMinutes: 60 },
-  });
-  expect(created.status()).toBe(201);
-  const eventType: { id: string } = await created.json();
-
-  await page.goto(`/book/${eventType.id}`);
-  const day = page.getByRole('list', { name: 'Days' }).getByRole('button').nth(DAY_OF_THE_BOOKING);
-  await day.click();
-  await expect(day).toHaveAttribute('aria-pressed', 'true');
+  const eventTypeId = await createHourCall(request, eventTypeName);
+  await openDay(page, eventTypeId, DAY_OF_THE_BOOKING);
 
   const slots = page.getByRole('list', { name: 'Slots' }).getByRole('listitem');
   // The first slot that is free. A retry of this test finds its earlier one taken.

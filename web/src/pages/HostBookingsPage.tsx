@@ -1,10 +1,8 @@
 import { Anchor, Container, Paper, Stack, Text, Title } from '@mantine/core';
-import { useEffect, useState } from 'react';
 import { Link } from 'react-router';
 import { type Booking, listBookings } from '../api/client.ts';
 import { formatHostInterval, HOST_TIME_ZONE } from '../hostTime.ts';
-
-type Loading = 'loading' | 'loaded' | 'failed';
+import { useLoadOnMount } from '../useLoadOnMount.ts';
 
 function BookingList({ bookings }: { bookings: Booking[] }) {
   if (bookings.length === 0) {
@@ -30,30 +28,7 @@ function BookingList({ bookings }: { bookings: Booking[] }) {
 }
 
 export function HostBookingsPage() {
-  const [bookings, setBookings] = useState<Booking[]>([]);
-  const [loading, setLoading] = useState<Loading>('loading');
-
-  useEffect(() => {
-    let current = true;
-
-    listBookings().then(
-      (loaded) => {
-        if (current) {
-          setBookings(loaded);
-          setLoading('loaded');
-        }
-      },
-      () => {
-        if (current) {
-          setLoading('failed');
-        }
-      },
-    );
-
-    return () => {
-      current = false;
-    };
-  }, []);
+  const { value: bookings, loading } = useLoadOnMount(listBookings, []);
 
   return (
     <Container size="sm" py="xl">

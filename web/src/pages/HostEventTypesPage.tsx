@@ -1,10 +1,8 @@
 import { Anchor, Container, Paper, Stack, Text, Title } from '@mantine/core';
-import { useEffect, useState } from 'react';
 import { Link } from 'react-router';
 import { type EventType, listEventTypes } from '../api/client.ts';
 import { EventTypeForm } from '../components/EventTypeForm.tsx';
-
-type Loading = 'loading' | 'loaded' | 'failed';
+import { useLoadOnMount } from '../useLoadOnMount.ts';
 
 function EventTypeList({ eventTypes }: { eventTypes: EventType[] }) {
   if (eventTypes.length === 0) {
@@ -29,30 +27,7 @@ function EventTypeList({ eventTypes }: { eventTypes: EventType[] }) {
 }
 
 export function HostEventTypesPage() {
-  const [eventTypes, setEventTypes] = useState<EventType[]>([]);
-  const [loading, setLoading] = useState<Loading>('loading');
-
-  useEffect(() => {
-    let current = true;
-
-    listEventTypes().then(
-      (loaded) => {
-        if (current) {
-          setEventTypes(loaded);
-          setLoading('loaded');
-        }
-      },
-      () => {
-        if (current) {
-          setLoading('failed');
-        }
-      },
-    );
-
-    return () => {
-      current = false;
-    };
-  }, []);
+  const { value: eventTypes, loading, update } = useLoadOnMount(listEventTypes, []);
 
   return (
     <Container size="sm" py="xl">
@@ -74,10 +49,7 @@ export function HostEventTypesPage() {
           </Title>
           <EventTypeForm
             // The server lists event types oldest first, so a new one goes last.
-            onCreated={(eventType) => {
-              setEventTypes((listed) => [...listed, eventType]);
-              setLoading('loaded');
-            }}
+            onCreated={(eventType) => update((listed) => [...listed, eventType])}
           />
         </>
       )}

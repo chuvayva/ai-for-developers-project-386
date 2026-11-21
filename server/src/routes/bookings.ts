@@ -56,22 +56,22 @@ export default async function bookingRoutes(
 
       const eventType = requireEventType(store, eventTypeId);
 
-      const moment = now();
-      const answer = checkStartTime(
+      const current = now();
+      const check = checkStartTime(
         {
           durationMinutes: eventType.durationMinutes,
-          now: moment,
+          now: current,
           bookings: store.listBookings(),
         },
         start,
       );
-      if (answer.is === 'not-a-slot') {
+      if (check.status === 'not-a-slot') {
         throw new ApiFailure(
           'not_a_slot',
           `${JSON.stringify(startTime)} is not the start of a slot of this event type.`,
         );
       }
-      if (answer.is === 'taken') {
+      if (check.status === 'taken') {
         throw new ApiFailure(
           'slot_taken',
           `The slot starting at ${toTimestamp(start.getTime())} is already booked.`,
@@ -80,11 +80,11 @@ export default async function bookingRoutes(
 
       const booking = store.createBooking({
         eventType,
-        startTime: answer.slot.startTime,
-        endTime: answer.slot.endTime,
+        startTime: check.slot.startTime,
+        endTime: check.slot.endTime,
         guestName,
         guestEmail,
-        createdAt: toTimestamp(moment.getTime()),
+        createdAt: toTimestamp(current.getTime()),
       });
       reply.status(201).send(booking);
     },
