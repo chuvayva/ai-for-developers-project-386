@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.0](https://github.com/chuvayva/ai-for-developers-project-386/compare/v0.1.0...v0.2.0) (2026-11-22)
+
+
+### Features
+
+* ship the app as one docker image ([0b40730](https://github.com/chuvayva/ai-for-developers-project-386/commit/0b40730b9e482987a678d49f754339895b02e30b))
+
 ## 0.1.0 (2026-11-22)
 
 
