@@ -1,4 +1,4 @@
 {
   "singleQuote": true,
-  "ignorePatterns": [".github/workflows/hexlet-check.yml", "pnpm-lock.yaml"]
+  "ignorePatterns": [".github/workflows/hexlet-check.yml", "pnpm-lock.yaml", "CHANGELOG.md"]
 }

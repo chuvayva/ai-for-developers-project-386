@@ -90,6 +90,8 @@ Example: `feat(api): add booking slots endpoint`.
 
 release-please reads those commit messages on every push to `main` and keeps one release PR open with the next version and the `CHANGELOG.md` entry. The whole repo shares one version, kept in the root `package.json` and `.release-please-manifest.json`, with tags of the form `v1.2.3`. Merging the release PR tags the release and publishes it on GitHub. The release PR is titled `chore: release <version>` so that its commit passes commitlint.
 
+release-please writes `CHANGELOG.md` in its own style, and the release PR runs no checks, because GitHub starts no workflows for a push made with the workflow's token. oxfmt therefore ignores `CHANGELOG.md`, so that merging a release PR leaves `main` passing. Leave the file to release-please.
+
 ## Hexlet
 
 `.github/workflows/hexlet-check.yml` belongs to Hexlet's automated checks. Leave it and the repository name unchanged.
