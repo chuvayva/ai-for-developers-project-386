@@ -1,3 +1,4 @@
+import fastifyStatic from '@fastify/static';
 import Fastify, { type FastifyInstance, type FastifyServerOptions } from 'fastify';
 import { registerErrorHandling, sendRouterFailure } from './errors.ts';
 import bookingRoutes from './routes/bookings.ts';
@@ -12,10 +13,16 @@ export type Clock = () => Date;
 export type AppOptions = FastifyServerOptions & {
   /** The clock of the app. Tests set it. The default is the system clock. */
   now?: Clock;
+  /**
+   * The folder of the built interface, `web/dist`. When it is set, the app
+   * serves the interface next to the API on the same port. Tests and
+   * `mise run dev` leave it out.
+   */
+  webRoot?: string;
 };
 
 export function build(opts: AppOptions = {}): FastifyInstance {
-  const { now = () => new Date(), ...fastifyOptions } = opts;
+  const { now = () => new Date(), webRoot, ...fastifyOptions } = opts;
 
   const app = Fastify({
     ...fastifyOptions,
@@ -36,5 +43,29 @@ export function build(opts: AppOptions = {}): FastifyInstance {
   app.register(slotRoutes, { prefix: '/api', store, now });
   app.register(bookingRoutes, { prefix: '/api', store, now });
 
+  if (webRoot !== undefined) {
+    registerWeb(app, webRoot);
+  }
+
   return app;
+}
+
+/**
+ * Serves the built interface. A GET outside `/api` that names no file gets
+ * `index.html`, and the interface's router chooses the page.
+ */
+function registerWeb(app: FastifyInstance, root: string): void {
+  app.register(fastifyStatic, { root, wildcard: false });
+
+  app.setNotFoundHandler((request, reply) => {
+    const isApi = request.url === '/api' || request.url.startsWith('/api/');
+    if (request.method === 'GET' && !isApi) {
+      return reply.sendFile('index.html');
+    }
+    return reply.status(404).send({
+      statusCode: 404,
+      error: 'Not Found',
+      message: `Route ${request.method}:${request.url} not found`,
+    });
+  });
 }

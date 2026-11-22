@@ -1,0 +1,12 @@
+# Render Blueprint: one web service built from the Dockerfile. Render passes the
+# port in PORT and redeploys on every push to main.
+services:
+  - type: web
+    name: calendar
+    runtime: docker
+    plan: free
+    region: frankfurt
+    branch: main
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /api/health
+    autoDeployTrigger: commit
