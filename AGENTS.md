@@ -60,6 +60,12 @@ Node runs the TypeScript sources directly through type stripping, with no build 
 - Relative imports carry the `.ts` extension.
 - Only erasable syntax compiles. Use union types and plain objects in place of `enum`, `namespace` and constructor parameter properties.
 
+## Deploy
+
+`Dockerfile` builds one image. `build()` takes a `webRoot` option, and `main.ts` sets it from `WEB_DIST`. With it, the server serves `web/dist` next to `/api` and answers a GET outside `/api` that names no file with `index.html`. The image listens on `0.0.0.0` and the port in `PORT`. The `docker` workflow builds the image and checks that it answers on `PORT`.
+
+Render runs the image as the web service `calendar` and redeploys on every push to `main`. `render.yaml` holds its settings. `.mcp.json` connects the Render MCP server with the key in `RENDER_API_KEY`. Never write the key into the repo.
+
 ## Web
 
 Render components under test inside `MantineProvider`. `web/src/test-setup.ts` stubs `matchMedia` and `ResizeObserver`, which jsdom lacks and Mantine calls.
